@@ -3,16 +3,20 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::time::{Duration, Instant};
 
+use super::ds::Rlist;
+
 #[derive(Clone)]
 pub struct Database {
     db: Arc<RwLock<HashMap<String, String>>>,
     expiry: Arc<RwLock<HashMap<String, Instant>>>,
+    list: Arc<RwLock<HashMap<String, Rlist>>>,
 }
 impl Database {
     pub fn new() -> Self {
         Database {
             db: Arc::new(RwLock::new(HashMap::new())),
             expiry: Arc::new(RwLock::new(HashMap::new())),
+            list: Arc::new(RwLock::new(HashMap::new())),
         }
     }
     pub async fn set(&self, key: String, value: String, time_to_live: Option<u64>) {
@@ -48,5 +52,41 @@ impl Database {
             return Instant::now() > expiry_time;
         }
         false
+    }
+
+    // for Rlist
+    pub async fn lpush(&self, key: String, value: String) {
+        let mut list_map = self.list.write().await;
+        let list = list_map.entry(key).or_insert_with(Rlist::new);
+        list.lpush(value);
+    }
+    pub async fn rpush(&self, key: String, value: String) {
+        let mut list_map = self.list.write().await;
+        let list = list_map.entry(key).or_insert_with(Rlist::new);
+        list.rpush(value);
+    }
+    pub async fn rpop(&self, key: &str) -> Option<String> {
+        let mut list_map = self.list.write().await;
+        if let Some(list) = list_map.get_mut(key) {
+            list.rpop()
+        } else {
+            None
+        }
+    }
+    pub async fn lpop(&self, key: &str) -> Option<String> {
+        let mut list_map = self.list.write().await;
+        if let Some(list) = list_map.get_mut(key) {
+            list.lpop()
+        } else {
+            None
+        }
+    }
+    pub async fn lrange(&self, start: usize, end: usize, key: &str) -> Option<Vec<String>> {
+        let mut list_map = self.list.write().await;
+        if let Some(list) = list_map.get_mut(key) {
+            Some(list.lrange(start, end))
+        } else {
+            None
+        }
     }
 }

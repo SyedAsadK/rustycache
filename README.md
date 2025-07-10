@@ -1,6 +1,6 @@
 # rustycache
 
-**rustycache** is a Redis-clone attempt in Rust, built for learning and fun.  
+**rustycache** is a Redis-like-clone attempt in Rust, built for learning and fun.  
 This project aims to explore core concepts of cache servers, networking, and async programming using the Rust language.
 
 ## Features
