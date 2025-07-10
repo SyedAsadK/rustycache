@@ -61,7 +61,7 @@ pub async fn cmd_parser(db: &Database, cmd: &str) -> Result<String, String> {
                 .map_err(|_| "Start index is invalid")?;
             let end = end.parse::<usize>().map_err(|_| "End index is invalid")?;
             if let Some(list) = db.lrange(start, end, key).await {
-                let mut response_var = format!("*{} - ITEMS(s)\r\n", list.len());
+                let mut response_var = format!("*{} - ITEM(s)\r\n", list.len());
                 for items in list {
                     response_var.push_str(&format!("${}\r\n{}\r\n", items.len(), items));
                 }
@@ -83,13 +83,13 @@ pub async fn cmd_parser(db: &Database, cmd: &str) -> Result<String, String> {
         ["SMEMBERS", key] => {
             // Ok(format!("${}\r\n", if rem { 1 } else { 0 }))
             if let Some(list) = db.smembers(key).await {
-                let mut response_var = format!("*{} - ITEMS(s)\r\n", list.len());
+                let mut response_var = format!("*{} - ITEM(s)\r\n", list.len());
                 for items in list {
                     response_var.push_str(&format!("${}\r\n{}\r\n", items.len(), items));
                 }
                 Ok(response_var)
             } else {
-                Ok(format!("+ \"{}\" - LIST NOT FOUND\r\n", key))
+                Ok(format!("+ \"{}\" - SET NOT FOUND\r\n", key))
             }
         }
         ["ISMEMBER", key, member] => {

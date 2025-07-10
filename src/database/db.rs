@@ -96,7 +96,7 @@ impl Database {
     // For RSet
     pub async fn sadd(&self, key: String, value: String) -> bool {
         let mut set_map = self.set.write().await;
-        let mut set = set_map.entry(key).or_insert_with(RSets::new);
+        let set = set_map.entry(key).or_insert_with(RSets::new);
         set.sadd(value)
     }
     pub async fn srem(&self, key: &str, value: &str) -> bool {
@@ -108,7 +108,7 @@ impl Database {
         }
     }
     pub async fn smembers(&self, key: &str) -> Option<Vec<String>> {
-        let mut set_map = self.set.read().await;
+        let set_map = self.set.read().await;
         if let Some(set) = set_map.get(key) {
             Some(set.smembers())
         } else {
@@ -116,7 +116,7 @@ impl Database {
         }
     }
     pub async fn ismember(&self, key: &str, val: &str) -> bool {
-        let mut set_map = self.set.read().await;
+        let set_map = self.set.read().await;
         if let Some(set) = set_map.get(key) {
             set.ismember(val)
         } else {
