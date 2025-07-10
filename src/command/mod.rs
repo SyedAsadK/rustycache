@@ -61,14 +61,40 @@ pub async fn cmd_parser(db: &Database, cmd: &str) -> Result<String, String> {
                 .map_err(|_| "Start index is invalid")?;
             let end = end.parse::<usize>().map_err(|_| "End index is invalid")?;
             if let Some(list) = db.lrange(start, end, key).await {
-                let mut response_var = format!("*{}\r\n", list.len());
+                let mut response_var = format!("*{} - ITEMS(s)\r\n", list.len());
                 for items in list {
                     response_var.push_str(&format!("${}\r\n{}\r\n", items.len(), items));
                 }
                 Ok(response_var)
             } else {
-                Ok("+OK\r\n".to_string())
+                Ok(format!("+ \"{}\" - LIST NOT FOUND\r\n", key))
             }
+        }
+
+        //SET operations here
+        ["SADD", key, val] => {
+            let add = db.sadd(key.to_string(), val.to_string()).await;
+            Ok(format!("${}\r\n", if add { 1 } else { 0 }))
+        }
+        ["SREM", key, val] => {
+            let rem = db.srem(key, val).await;
+            Ok(format!("${}\r\n", if rem { 1 } else { 0 }))
+        }
+        ["SMEMBERS", key] => {
+            // Ok(format!("${}\r\n", if rem { 1 } else { 0 }))
+            if let Some(list) = db.smembers(key).await {
+                let mut response_var = format!("*{} - ITEMS(s)\r\n", list.len());
+                for items in list {
+                    response_var.push_str(&format!("${}\r\n{}\r\n", items.len(), items));
+                }
+                Ok(response_var)
+            } else {
+                Ok(format!("+ \"{}\" - LIST NOT FOUND\r\n", key))
+            }
+        }
+        ["ISMEMBER", key, member] => {
+            let is_mem = db.ismember(key, member).await;
+            Ok(format!("${}\r\n", if is_mem { 1 } else { 0 }))
         }
 
         _ => Ok("-ERR\r\nCommand is unknown, Please try again\n".to_string()),

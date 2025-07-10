@@ -1,15 +1,16 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::time::{Duration, Instant};
 
-use super::ds::Rlist;
+use super::ds::{RSets, Rlist};
 
 #[derive(Clone)]
 pub struct Database {
     db: Arc<RwLock<HashMap<String, String>>>,
     expiry: Arc<RwLock<HashMap<String, Instant>>>,
     list: Arc<RwLock<HashMap<String, Rlist>>>,
+    set: Arc<RwLock<HashMap<String, RSets>>>,
 }
 impl Database {
     pub fn new() -> Self {
@@ -17,8 +18,10 @@ impl Database {
             db: Arc::new(RwLock::new(HashMap::new())),
             expiry: Arc::new(RwLock::new(HashMap::new())),
             list: Arc::new(RwLock::new(HashMap::new())),
+            set: Arc::new(RwLock::new(HashMap::new())),
         }
     }
+
     pub async fn set(&self, key: String, value: String, time_to_live: Option<u64>) {
         let mut db_map = self.db.write().await;
         db_map.insert(key.clone(), value);
@@ -87,6 +90,37 @@ impl Database {
             Some(list.lrange(start, end))
         } else {
             None
+        }
+    }
+
+    // For RSet
+    pub async fn sadd(&self, key: String, value: String) -> bool {
+        let mut set_map = self.set.write().await;
+        let mut set = set_map.entry(key).or_insert_with(RSets::new);
+        set.sadd(value)
+    }
+    pub async fn srem(&self, key: &str, value: &str) -> bool {
+        let mut set_map = self.set.write().await;
+        if let Some(set) = set_map.get_mut(key) {
+            set.srem(value)
+        } else {
+            false
+        }
+    }
+    pub async fn smembers(&self, key: &str) -> Option<Vec<String>> {
+        let mut set_map = self.set.read().await;
+        if let Some(set) = set_map.get(key) {
+            Some(set.smembers())
+        } else {
+            None
+        }
+    }
+    pub async fn ismember(&self, key: &str, val: &str) -> bool {
+        let mut set_map = self.set.read().await;
+        if let Some(set) = set_map.get(key) {
+            set.ismember(val)
+        } else {
+            false
         }
     }
 }
